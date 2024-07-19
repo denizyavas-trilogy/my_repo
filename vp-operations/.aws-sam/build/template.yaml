@@ -1,0 +1,85 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Globals:
+  Function:
+    Timeout: 900
+    MemorySize: 512
+Resources:
+  VpOpsFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: LambdaVPCAccess
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - ec2:CreateNetworkInterface
+            - ec2:DescribeNetworkInterfaces
+            - ec2:DeleteNetworkInterface
+            Resource: '*'
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+  VpOpsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: vp_ops
+      CodeUri: VpOpsFunction
+      Handler: app.lambda_handler
+      Runtime: python3.9
+      Architectures:
+      - x86_64
+      Role:
+        Fn::GetAtt:
+        - VpOpsFunctionRole
+        - Arn
+      VpcConfig:
+        SubnetIds:
+        - subnet-ee21528a
+        - subnet-9ad3a6d1
+        SecurityGroupIds:
+        - sg-09571ba2b470d1ff9
+      Events:
+        VpOps:
+          Type: Api
+          Properties:
+            Path: /handler
+            Method: post
+        MyBacklogRefresh:
+          Type: Schedule
+          Properties:
+            Schedule: rate(10 minutes)
+            Input: '{"action_type": "backlog_refresh"}'
+        TempoPrio:
+          Type: Schedule
+          Properties:
+            Schedule: rate(2 hours)
+            Input: '{"action_type": "update_priority"}'
+      Environment:
+        Variables:
+          db_host: prod.survey.mysql.aureacentral.com
+          db_name: prod_cssurvey
+          db_username: prod_cssurvey_readonly
+          db_password: NUtmdlEzODhreHBWMg==
+          gsheet_service_file: client-requests-421814-59856c5b47bb.json
+          graphql_apiUrl: https://api.alp-pulse.com/graphql
+          aws_username: denizyavas
+          aws_password: VGFtMzVrc2sh
+          aws_pool: us-east-1_Qfm4sxW6Z
+          aws_client: 4tgu9t1ko3b07h06u23irqqk4l
+          aws_region: us-east-1
+          zendesk_domain: central-supportdesk
+          zendesk_email: deniz.yavas@trilogy.com
+          zendesk_password: MSJ3cXNheHo=
+          jira_username: deniz.yavas@trilogy.com
+          jira_token: QVRBVFQzeEZmR0YwejhwMkNuQ2FESkl4REh3ZjZnUGZxMlR0c2t2b2JCVlNETkMyTDBvU1FFMTJGNVNPUDNEQVF4X095QzExRmotZEs3ektoV0VIMGJRU1VuWnNJTlFDRFFHa2xmZXRoMFU4cm5WSjVhZFI4OHgzZjh1TFlQQmU3N3Bhd211bXJ4YktYLXF2Wk9lbGw5Z1dLQzU0Z1pmV1lsWmpFQ2NCb1dtMktpSnAtdEtIUWRBPUI3NTRGMUUx
+    Metadata:
+      SamResourceId: VpOpsFunction
